@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Сюннет"><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icon.png">
 <title>Сюннет Бразерс</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>html,body{margin:0;height:100%;background:#0d0d0f;overflow:hidden}canvas{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);image-rendering:pixelated;image-rendering:crisp-edges}</style>
@@ -450,37 +450,45 @@ function frame(){pollPad();tick++;
   musicTick();for(const k in pressed)delete pressed[k];requestAnimationFrame(frame)}
 
 // ================= TOUCH CONTROLS =================
+const IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform=='MacIntel'&&navigator.maxTouchPoints>1),STANDALONE=navigator.standalone||matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches;
+function unlockAudio(){initAudio();if(!AC)return;try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch(e){}try{AC.resume()}catch(e){}try{const b=AC.createBuffer(1,1,22050),src=AC.createBufferSource();src.buffer=b;src.connect(AC.destination);src.start(0)}catch(e){}}
+function goFull(){const d=document.documentElement;if(!IOS&&d.requestFullscreen&&!document.fullscreenElement){d.requestFullscreen({navigationUI:'hide'}).then(()=>{try{screen.orientation.lock('landscape').catch(()=>{})}catch(e){}}).catch(()=>{})}}
 if(TOUCH){document.body.classList.add('touch');padSeen=true;
   const css=document.createElement('style');css.textContent=`
 body.touch{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overscroll-behavior:none;position:fixed;inset:0}
-.tb{position:fixed;z-index:5;border-radius:50%;background:rgba(20,16,30,.32);border:2px solid rgba(255,255,255,.35);color:rgba(255,255,255,.9);font:16px "Press Start 2P",monospace;display:flex;align-items:center;justify-content:center;touch-action:none;-webkit-tap-highlight-color:transparent}
-.tb.on{background:rgba(240,192,64,.5)}
-#dpad{left:calc(12px + env(safe-area-inset-left));bottom:12px;width:150px;height:150px}
-#dpad i{position:absolute;width:0;height:0;border:0 solid transparent}
-#dpad .u{top:12px;left:50%;margin-left:-14px;border-width:0 14px 20px 14px;border-bottom-color:rgba(255,255,255,.75)}
-#dpad .d{bottom:12px;left:50%;margin-left:-14px;border-width:20px 14px 0 14px;border-top-color:rgba(255,255,255,.75)}
-#dpad .l{left:12px;top:50%;margin-top:-14px;border-width:14px 20px 14px 0;border-right-color:rgba(255,255,255,.75)}
-#dpad .r{right:12px;top:50%;margin-top:-14px;border-width:14px 0 14px 20px;border-left-color:rgba(255,255,255,.75)}
-#bA{right:calc(14px + env(safe-area-inset-right));bottom:28px;width:80px;height:80px;font-size:20px;background:rgba(80,140,60,.4)}
-#bB{right:calc(104px + env(safe-area-inset-right));bottom:10px;width:66px;height:66px;background:rgba(180,60,50,.4)}
-#bY{right:calc(96px + env(safe-area-inset-right));bottom:88px;width:56px;height:56px;font-size:13px;background:rgba(200,160,40,.4)}
-#bP{right:calc(12px + env(safe-area-inset-right));top:10px;width:46px;height:34px;border-radius:8px;font-size:11px}
+.tb{position:fixed;z-index:5;width:62px;height:62px;border-radius:12px;background:rgba(14,12,20,.38);border:2px solid rgba(240,234,216,.45);box-shadow:0 3px 0 rgba(0,0,0,.35);color:rgba(240,234,216,.95);font:15px "Press Start 2P",monospace;display:flex;align-items:center;justify-content:center;touch-action:none;-webkit-tap-highlight-color:transparent;pointer-events:none}
+.tb.on{background:rgba(240,192,64,.45);border-color:#f0c040;transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.35)}
+.tb i{width:0;height:0;border:0 solid transparent}
+.tb .l{border-width:12px 17px 12px 0;border-right-color:currentColor}.tb .r{border-width:12px 0 12px 17px;border-left-color:currentColor}
+.tb .u{border-width:0 11px 15px 11px;border-bottom-color:currentColor}.tb .d{border-width:15px 11px 0 11px;border-top-color:currentColor}
+.zone{position:fixed;z-index:6;touch-action:none;-webkit-tap-highlight-color:transparent}
+#bL{left:calc(12px + env(safe-area-inset-left));bottom:14px;width:68px;height:68px}
+#bR{left:calc(90px + env(safe-area-inset-left));bottom:14px;width:68px;height:68px}
+#bU{left:calc(30px + env(safe-area-inset-left));bottom:92px;width:50px;height:42px}
+#bD{left:calc(90px + env(safe-area-inset-left));bottom:92px;width:50px;height:42px}
+#bA{right:calc(12px + env(safe-area-inset-right));bottom:30px;width:70px;height:70px;font-size:18px;border-color:rgba(150,200,120,.7)}
+#bB{right:calc(92px + env(safe-area-inset-right));bottom:14px;width:62px;height:62px;border-color:rgba(230,110,90,.7)}
+#bY{right:calc(92px + env(safe-area-inset-right));bottom:86px;width:52px;height:46px;font-size:12px;border-color:rgba(240,192,64,.7)}
+#bP{right:calc(12px + env(safe-area-inset-right));top:10px;width:46px;height:34px;font-size:10px;pointer-events:auto}
 #rot{display:none;position:fixed;inset:0;background:#120e18;color:#f0c040;z-index:9;align-items:center;justify-content:center;text-align:center;font:14px/2.2 "Press Start 2P",monospace;padding:24px}
+#hint{position:fixed;z-index:7;left:50%;top:6px;transform:translateX(-50%);background:rgba(14,12,20,.8);border:1px solid #6a5a7a;color:#f0c040;font:9px/1.6 "Press Start 2P",monospace;padding:6px 10px;border-radius:6px;white-space:nowrap;display:none}
 @media (orientation:portrait){body.touch #rot{display:flex}}`;document.head.appendChild(css);
-  const mk=(id,html)=>{const d=document.createElement('div');d.id=id;d.className=id=='rot'?'':'tb';d.innerHTML=html;document.body.appendChild(d);return d};
-  mk('rot','ПОВЕРНИ ТЕЛЕФОН<br>ГОРИЗОНТАЛЬНО<br><br>СУПЕР МАРМОН<br>СЮННЕТ БРАЗЕРС');
-  const dp=mk('dpad','<i class=u></i><i class=d></i><i class=l></i><i class=r></i>');
-  const dirs={ArrowLeft:0,ArrowRight:0,ArrowUp:0,ArrowDown:0};
-  const setDir=(l,r,u,d)=>{const m={ArrowLeft:l,ArrowRight:r,ArrowUp:u,ArrowDown:d};for(const k in m){const v=!!m[k];if(dirs[k]!==v){dirs[k]=v;vk(k,v,true)}}};
-  const dpMove=e=>{e.preventDefault();if(!e.targetTouches.length){setDir(0,0,0,0);dp.classList.remove('on');return}dp.classList.add('on');
-    const t=e.targetTouches[0],b=dp.getBoundingClientRect(),dx=t.clientX-(b.left+b.width/2),dy=t.clientY-(b.top+b.height/2),rr=b.width/2;
-    setDir(dx<-rr*.2,dx>rr*.2,dy<-rr*.45&&Math.abs(dy)>Math.abs(dx)*.7,dy>rr*.45&&Math.abs(dy)>Math.abs(dx)*.7)};
-  for(const ev of['touchstart','touchmove','touchend','touchcancel'])dp.addEventListener(ev,dpMove,{passive:false});
-  const btn=(id,label,code)=>{const b=mk(id,label);const on=e=>{e.preventDefault();if(!b.classList.contains('on')){b.classList.add('on');vk(code,true,true)}},off=e=>{e.preventDefault();if(!e.targetTouches.length){b.classList.remove('on');vk(code,false,true)}};
-    b.addEventListener('touchstart',on,{passive:false});b.addEventListener('touchend',off,{passive:false});b.addEventListener('touchcancel',off,{passive:false})};
-  btn('bA','A','KeyE');btn('bB','B','KeyX');btn('bY','Y','KeyC');btn('bP','II','Escape');
+  const mk=(id,html,cls)=>{const d=document.createElement('div');d.id=id;d.className=cls==null?'tb':cls;d.innerHTML=html;document.body.appendChild(d);return d};
+  mk('rot','ПОВЕРНИ ТЕЛЕФОН<br>ГОРИЗОНТАЛЬНО<br><br>СУПЕР МАРМОН<br>СЮННЕТ БРАЗЕРС','');
+  const hint=mk('hint',IOS?'ПОЛНЫЙ ЭКРАН: ПОДЕЛИТЬСЯ → НА ЭКРАН «ДОМОЙ»':'','');
+  const B=[['bL','<i class=l></i>','ArrowLeft','L'],['bR','<i class=r></i>','ArrowRight','L'],['bU','<i class=u></i>','ArrowUp','L'],['bD','<i class=d></i>','ArrowDown','L'],['bA','A','KeyE','R'],['bB','B','KeyX','R'],['bY','Y','KeyC','R']].map(([id,h,code,side])=>({el:mk(id,h),code,side,on:false}));
+  const zone=(side,css)=>{const z=document.createElement('div');z.className='zone';Object.assign(z.style,css);document.body.appendChild(z);
+    const upd=e=>{e.preventDefault();const pts=[...e.touches].map(t=>[t.clientX,t.clientY]);
+      for(const b of B){if(b.side!=side)continue;const r=b.el.getBoundingClientRect(),pad=10,hit=pts.some(([x,y])=>x>=r.left-pad&&x<=r.right+pad&&y>=r.top-pad&&y<=r.bottom+pad);if(hit!=b.on){b.on=hit;b.el.classList.toggle('on',hit);vk(b.code,hit,true)}}};
+    for(const ev of['touchstart','touchmove','touchend','touchcancel'])z.addEventListener(ev,upd,{passive:false});return z};
+  zone('L',{left:'0',bottom:'0',width:'190px',height:'160px'});zone('R',{right:'0',bottom:'0',width:'190px',height:'160px'});
+  const P=mk('bP','II');P.addEventListener('touchstart',e=>{e.preventDefault();P.classList.add('on');vk('Escape',true,true)},{passive:false});P.addEventListener('touchend',e=>{e.preventDefault();P.classList.remove('on');vk('Escape',false,true)},{passive:false});
+  document.addEventListener('touchend',()=>{unlockAudio();goFull()},{capture:true,passive:true});
   document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
   document.addEventListener('gesturestart',e=>e.preventDefault());
+  setInterval(()=>{hint.style.display=IOS&&!STANDALONE&&state=='title'?'block':'none'},300);
 }
+addEventListener('click',unlockAudio);
+
 frame();
 </script></body></html>
