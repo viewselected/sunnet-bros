@@ -31,7 +31,7 @@ const pOK=()=>pressed.Enter||pressed.Space||pressed.KeyE||pressed.KeyZ;
 
 // ================= AUDIO =================
 let AC=null,master,nb,muted=false,musT=0,musStep=0,music=null;
-function initAudio(){if(AC){if(AC.state=='suspended')AC.resume();return}try{AC=new(window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=.5;master.connect(AC.destination);nb=AC.createBuffer(1,AC.sampleRate,AC.sampleRate);const d=nb.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}catch(e){AC=null}}
+function initAudio(){try{if(navigator.audioSession&&navigator.audioSession.type!='playback')navigator.audioSession.type='playback'}catch(e){}if(AC){if(AC.state=='suspended')AC.resume();return}try{AC=new(window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=.5;master.connect(AC.destination);nb=AC.createBuffer(1,AC.sampleRate,AC.sampleRate);const d=nb.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}catch(e){AC=null}}
 function tone(f,dur,type,vol,to,when){if(!AC)return;const o=AC.createOscillator(),g=AC.createGain(),t=when||AC.currentTime;o.type=type||'square';o.frequency.setValueAtTime(f,t);if(to)o.frequency.exponentialRampToValueAtTime(to,t+dur);g.gain.setValueAtTime(vol||.05,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);o.connect(g);g.connect(master);o.start(t);o.stop(t+dur+.02)}
 function noise(dur,freq,type,vol){if(!AC)return;const s=AC.createBufferSource();s.buffer=nb;const f=AC.createBiquadFilter();f.type=type;f.frequency.value=freq;const g=AC.createGain(),t=AC.currentTime;g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);s.connect(f);f.connect(g);g.connect(master);s.start(t,Math.random()*.5);s.stop(t+dur)}
 const sfx={pipe:()=>[600,450,300].forEach((f,i)=>setTimeout(()=>tone(f,.09,'square',.05),i*70)),jump:()=>tone(300,.15,'square',.05,700),coin:()=>{tone(988,.06,'square',.05);setTimeout(()=>tone(1319,.12,'square',.05),60)},stomp:()=>{tone(220,.1,'square',.07,80);noise(.08,600,'lowpass',.3)},
@@ -451,7 +451,13 @@ function frame(){pollPad();tick++;
 
 // ================= TOUCH CONTROLS =================
 const IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform=='MacIntel'&&navigator.maxTouchPoints>1),STANDALONE=navigator.standalone||matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches;
-function unlockAudio(){initAudio();if(!AC)return;try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch(e){}try{AC.resume()}catch(e){}try{const b=AC.createBuffer(1,1,22050),src=AC.createBufferSource();src.buffer=b;src.connect(AC.destination);src.start(0)}catch(e){}}
+let silentEl=null;
+function silentWav(){const sr=8000,n=sr/2,b=new ArrayBuffer(44+n*2),v=new DataView(b),w=(o,t)=>{for(let i=0;i<t.length;i++)v.setUint8(o+i,t.charCodeAt(i))};w(0,'RIFF');v.setUint32(4,36+n*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,n*2,true);return URL.createObjectURL(new Blob([b],{type:'audio/wav'}))}
+function unlockAudio(){initAudio();if(!AC)return;
+  try{if(!silentEl){silentEl=document.createElement('audio');silentEl.setAttribute('playsinline','');silentEl.setAttribute('x-webkit-airplay','deny');silentEl.preload='auto';silentEl.loop=true;silentEl.src=silentWav()}if(silentEl.paused)silentEl.play().catch(()=>{})}catch(e){}
+  try{if(AC.state!='running')AC.resume()}catch(e){}
+  try{const b=AC.createBuffer(1,1,22050),src=AC.createBufferSource();src.buffer=b;src.connect(AC.destination);src.start(0)}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&AC&&AC.state!='running'){try{AC.resume()}catch(e){}}});
 function goFull(){const d=document.documentElement;if(!IOS&&d.requestFullscreen&&!document.fullscreenElement){d.requestFullscreen({navigationUI:'hide'}).then(()=>{try{screen.orientation.lock('landscape').catch(()=>{})}catch(e){}}).catch(()=>{})}}
 if(TOUCH){document.body.classList.add('touch');padSeen=true;
   const css=document.createElement('style');css.textContent=`
@@ -489,7 +495,7 @@ body.touch{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-t
   document.addEventListener('gesturestart',e=>e.preventDefault());
   setInterval(()=>{hint.style.display=IOS&&!STANDALONE&&state=='title'?'block':'none'},300);
 }
-addEventListener('click',unlockAudio);
+addEventListener('click',unlockAudio);addEventListener('keydown',unlockAudio);
 
 frame();
 </script></body></html>
