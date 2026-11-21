@@ -7,7 +7,7 @@
 'use strict';
 const W=480,H=270,T=16,ROWS=17;
 const cv=document.getElementById('c'),ctx=cv.getContext('2d');cv.width=W;cv.height=H;
-const TOUCH=('ontouchstart' in window)||navigator.maxTouchPoints>0;
+const TOUCH=!/native=1/.test(location.search)&&(('ontouchstart' in window)||navigator.maxTouchPoints>0);
 function fit(){let s=Math.min(innerWidth/W,innerHeight/H);if(s>=1&&!TOUCH)s=Math.floor(s);cv.style.width=W*s+'px';cv.style.height=H*s+'px'}
 addEventListener('resize',fit);fit();
 const FONT='"Press Start 2P", monospace',R=Math.random,clamp=(v,a,b)=>v<a?a:v>b?b:v,pick=a=>a[(R()*a.length)|0];
@@ -22,9 +22,9 @@ window.onBack=function(){if(state=='title')return 'exit';pressed.Escape=true;ret
 function pollPad(){if(NATIVE)return;let gp=null;try{for(const g of(navigator.getGamepads?navigator.getGamepads():[]))if(g&&g.connected){gp=g;break}}catch(e){}
   const now={};if(gp){const b=i=>gp.buttons[i]&&(gp.buttons[i].pressed||gp.buttons[i].value>.4),ax=gp.axes||[];
     if(b(12)||ax[1]<-.5)now.ArrowUp=1;if(b(13)||ax[1]>.5)now.ArrowDown=1;if(b(14)||ax[0]<-.4)now.ArrowLeft=1;if(b(15)||ax[0]>.4)now.ArrowRight=1;
-    if(b(0))now.KeyE=1;if(b(1)||b(7))now.KeyR=1;if(b(2))now.Space=1;if(b(3))now.KeyQ=1;if(b(9))now.Enter=1;if(b(8))now.Escape=1}
+    if(b(0)||b(3))now.KeyE=1;if(b(1)||b(2)||b(7))now.KeyR=1;if(b(8)||b(4)||b(5)||b(6))now.KeyQ=1;if(b(9))now.Enter=1}
   for(const k in now)if(!padKeys[k]){pressed[k]=true;keys[k]=true;padSeen=true;initAudio()}for(const k in padKeys)if(!now[k])keys[k]=false;padKeys=now}
-const kJump=()=>keys.Space||keys.KeyZ||keys.KeyE||keys.ArrowUp||keys.KeyW,pJump=()=>pressed.Space||pressed.KeyZ||pressed.KeyE||pressed.ArrowUp||pressed.KeyW;
+const kJump=()=>keys.Space||keys.KeyZ||keys.KeyE||(!padSeen&&(keys.ArrowUp||keys.KeyW)),pJump=()=>pressed.Space||pressed.KeyZ||pressed.KeyE||(!padSeen&&(pressed.ArrowUp||pressed.KeyW));
 const pShoot=()=>pressed.KeyX||pressed.KeyR||pressed.KeyF||pressed.KeyJ,pSuper=()=>pressed.KeyC||pressed.KeyQ;
 const kL=()=>keys.ArrowLeft||keys.KeyA,kR=()=>keys.ArrowRight||keys.KeyD;
 const pOK=()=>pressed.Enter||pressed.Space||pressed.KeyE||pressed.KeyZ;
@@ -172,7 +172,7 @@ function grow(to){if(to>pl.big){if(pl.big==0){pl.y-=12;pl.h=26}pl.big=to;pop(pl.
 
 function update(){tick++;
   if(cut){cut.t++;if(cut.t>=cut.dur||(cut.t>70&&(pOK()||pShoot()||pSuper())))cut=null;return}
-  if(pressed.Escape||pressed.KeyP){state='pause';menuSel=0;return}
+  if(pressed.Escape||pressed.KeyP||pressed.Enter){state='pause';menuSel=0;return}
   if(pressed.KeyM)muted=!muted;
   if(mode=='tour'||!flagSeq)time--;if(mode=='tour'&&time<=0){endTour();return}if(time<0)time=0;
   const p=pl;
@@ -215,7 +215,7 @@ function update(){tick++;
   if(voice&&--voice.t<=0)voice=null;
   if(--voiceT<=0){voiceT=mode=='tour'?1400:900;if(!voice&&R()<.8)nextVoice()}
   stepWorld()}
-const BTN=k=>padSeen?{shoot:'B',super:'Y',jump:'A'}[k]:{shoot:'X',super:'C',jump:'ПРОБЕЛ'}[k];
+const BTN=k=>TOUCH?{shoot:'B',super:'Y',jump:'A'}[k]:padSeen?{shoot:'B',super:'SELECT',jump:'A'}[k]:{shoot:'X',super:'C',jump:'ПРОБЕЛ'}[k];
 let firsts={},seenEn={};
 function first(k,title,sub){if(firsts[k])return false;firsts[k]=1;cutin(title,sub,k,true);return true}
 function pickup(it){const x=it.x,y=it.y;
@@ -424,7 +424,7 @@ function drawTitle(){const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,
 function drawIntro(){ctx.fillStyle='#120e18';ctx.fillRect(0,0,W,H);const th=mode=='tour'?'ТУРНИР · МИР 1-1':THEMES[['sky','clinic','party'][levelN-1]].name;
   rainbow(th,W/2,30,th.length>22?10:12);drawMarmon(W/2-5,96,0,1,tick,true,0,false);txt('×  ∞ КРАЙНЕЙ ПЛОТИ',W/2+14,100,'#e8a596');
   const lines=wrap(mode=='tour'?TOURTXT:INTRO[levelN],W-60);lines.forEach((l,i)=>txt(l,30,130+i*12,'#e8e0d0'));
-  txt(padSeen?'A — прыжок · B — плоть · Y — ОБРЕЗАКЕН':'ПРОБЕЛ — прыжок · X — плоть · C — ОБРЕЗАКЕН',W/2,H-30,'#8a7a9a','center');
+  txt(TOUCH?'A — прыжок · B — плоть · Y — ОБРЕЗАКЕН':padSeen?'A — прыжок · B — плоть · SELECT — ОБРЕЗАКЕН · START — пауза':'ПРОБЕЛ — прыжок · X — плоть · C — ОБРЕЗАКЕН',W/2,H-30,'#8a7a9a','center');
   if(tick%60<40)txt(padSeen?'A — ПОЕХАЛИ':'ENTER — ПОЕХАЛИ',W/2,H-16,'#f0c040','center')}
 function drawEnding(){ctx.fillStyle='#1c1f3c';ctx.fillRect(0,0,W,H);for(let i=0;i<5;i++)balloon(40+i*95,30+Math.sin(tick*.04+i)*8,i);rainbow('КОНЕЦ ИСТОРИИ',W/2,24,16);
   pix(FACE,W/2-40,50,5);const lines=wrap('Главные Ножницы повержены. Крайняя плоть ушла красиво: в полёте, с огнём, под аплодисменты всей Малой Почтовой. Мармон стал на полтора сантиметра легче и на сто процентов легендарнее. Негрони за счёт заведения. Теперь — Турнир: кто наберёт больше очков, тот сегодня главный.',W-60);
